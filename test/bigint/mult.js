@@ -41,6 +41,7 @@ describe("WordMultiplierWithCarry", () => {
     });
 
     it("should have 4 + 4 + 1 constraints (4 bits/word)", async () => {
+        // 2w + 1
         const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "word_multiplier_carry_4.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         circuit.nConstraints.should.equal(4 + 4 + 1);
@@ -78,6 +79,7 @@ describe("NBy1Multiplier", () => {
     });
 
     it("should have 18 constraints", async () => {
+        // n (2w + 1)
         const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "n_by_1_mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         circuit.nConstraints.should.equal(18);
@@ -119,7 +121,8 @@ describe("Multiplier", () => {
         new snarkjs.Circuit(cirDef);
     });
 
-    it("should have 36 constraints", async () => {
+    it("should have 36 constraints (4 bits/word, 2 words)", async () => {
+        // n * n * (2w + 1)
         const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         circuit.nConstraints.should.equal(36);
@@ -227,5 +230,13 @@ describe("Multiplier", () => {
         assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(0)));
         assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(14)));
         assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(15)));
+    });
+
+    it("should have 8256 constraints (64 bits/word, 8 words)", async () => {
+        // n * n * (2w + 1) =
+        // 2 ** 6 * 129
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_64bit_8word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        circuit.nConstraints.should.equal(8256);
     });
 });
