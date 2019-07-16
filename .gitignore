@@ -63,3 +63,8 @@ typings/
 tmp
 
 .DS_Store
+
+# Circom temporaries
+**/*.json
+!package.json
+!package-lock.json
