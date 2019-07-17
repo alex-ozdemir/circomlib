@@ -166,3 +166,118 @@ template Multiplier(w, n) {
         prod[n - 1 + i] <== lineProds[n - 1][i];
     }
 }
+
+template PolynomialMultiplier(d) {
+    // Implementation of _xjSnark_'s multiplication.
+    // Polynomials with degree less than d.
+    // Uses a linear number of constraints ($2n - 1$).
+    // Based on the linear indepedence of $2n - 1$ equations.
+    //
+    // $x$ is `a`
+    // $y$ is `b`
+    signal input a[d];
+    signal input b[d];
+
+    // Witness value.
+    signal output prod[2 * d - 1];
+
+    // Witness computation.
+    compute {
+        var acc;
+        for (var i = 0; i < 2 * d - 1; i++) {
+            acc = 0;
+            for (var j = 0; j < d; j++) {
+                for (var k = 0; k < d; k++) {
+                    if (j + k == i) {
+                        acc += a[j] * b[k];
+                    }
+                }
+            }
+            prod[i] <-- acc;
+        }
+    }
+
+    // Conditions.
+    var aAcc;
+    var bAcc;
+    var pAcc;
+    for (var c = 0; c < 2 * d - 1; c++) {
+        aAcc = 0;
+        bAcc = 0;
+        pAcc = 0;
+        for (var i = 0; i < d; i++) {
+            aAcc += (c + 1) ** i * a[i];
+            bAcc += (c + 1) ** i * b[i];
+        }
+        for (var i = 0; i < 2 * d - 1; i++) {
+            pAcc += (c + 1) ** i * prod[i];
+        }
+        aAcc * bAcc === pAcc;
+    }
+}
+
+template Carry(w, n) {
+    // Given a w-bit, n-word number with digits that may be too large,
+    // produces the (n+1)-word number with appropriate digits.
+    // Asserts that the number actually fits in (n+1) words.
+    signal input in[n];
+
+    signal output out[n+1];
+
+    component outBitDecomps[n+1];
+
+    signal carry[n+1];
+
+    carry[0] <== 0;
+
+    for (var i = 0; i < n; i++) {
+        out[i] <-- (in[i] + carry[i]) % (2 ** w);
+        carry[i + 1] <-- (in[i] + carry[i]) >> w;
+
+        // Verify we've split correctly
+        carry[i + 1] * (2 ** w) + out[i] === carry[i] + in[i];
+
+        // Verify our low-order part fits in w bits.
+        outBitDecomps[i] = Num2Bits(w);
+        outBitDecomps[i].in <== out[i];
+    }
+
+    // The final carry is our final word
+    out[n] <== carry[n];
+
+    outBitDecomps[n] = Num2Bits(w);
+    outBitDecomps[n].in <== out[n];
+}
+
+template LinearMultiplier(w, n) {
+    // Implementation of _xjSnark_'s multiplication for n-word numbers.
+    //
+    // Uses $2n - 1$ constraints for polynomial multiplication.
+    // Uses $2n(w + 1)$ for bit decomposition of the result.
+    // Uses $2n - 1$ constraints for bit decomposition.
+    // For a total of $2n(w + 3) - 2$ constraints.
+
+    signal input a[n];
+    signal input b[n];
+
+    signal output prod[2 * n];
+
+    component polyMultiplier = PolynomialMultiplier(n);
+    component carrier = Carry(w, 2 * n - 1);
+
+    // Put our inputs into the polynomial multiplier
+    for (var i = 0; i < n; i++) {
+        polyMultiplier.a[i] <== a[i];
+        polyMultiplier.b[i] <== b[i];
+    }
+
+    // Put the polynomial product into the carrier
+    for (var i = 0; i < 2 * n - 1; i++) {
+        carrier.in[i] <== polyMultiplier.prod[i];
+    }
+
+    // Take the carrier output as our own
+    for (var i = 0; i < 2 * n; i++) {
+        prod[i] <== carrier.out[i];
+    }
+}

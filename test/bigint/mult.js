@@ -240,3 +240,221 @@ describe("Multiplier", () => {
         circuit.nConstraints.should.equal(8256);
     });
 });
+
+describe("PolynomialMultiplier", () => {
+    it("should be compilable", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
+        new snarkjs.Circuit(cirDef);
+    });
+
+    it("should have 7 constraints (degree <4)", async () => {
+        // 2 * d - 1
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        circuit.nConstraints.should.equal(7);
+    });
+
+    it("should compute 1 * 1 = 1 (degree <4)", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "a[0]": "1",
+            "a[1]": "0",
+            "a[2]": "0",
+            "a[3]": "0",
+            "b[0]": "1",
+            "b[1]": "0",
+            "b[2]": "0",
+            "b[3]": "0",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt(1)));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[4]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[5]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[6]"]].equals(snarkjs.bigInt(0)));
+    });
+
+    it("should compute 1,0,3 * 3,1 = 3,1,9,3 (degree <4)", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "a[0]": "3",
+            "a[1]": "0",
+            "a[2]": "1",
+            "a[3]": "0",
+            "b[0]": "1",
+            "b[1]": "3",
+            "b[2]": "0",
+            "b[3]": "0",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt(3)));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(9)));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(1)));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(3)));
+        assert(witness[circuit.signalName2Idx["main.prod[4]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[5]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[6]"]].equals(snarkjs.bigInt(0)));
+    });
+
+    it("should compute (3 + 4x + 5x^2 + 6x^3)(9 + 10x + 11x^2 + 12x^3) = 72 x^6 + 126 x^5 + 163 x^4 + 184 x^3 + 118 x^2 + 66 x + 27 (degree <4)", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "a[0]": "3",
+            "a[1]": "4",
+            "a[2]": "5",
+            "a[3]": "6",
+            "b[0]": "9",
+            "b[1]": "10",
+            "b[2]": "11",
+            "b[3]": "12",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt(27)));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(66)));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(118)));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(184)));
+        assert(witness[circuit.signalName2Idx["main.prod[4]"]].equals(snarkjs.bigInt(163)));
+        assert(witness[circuit.signalName2Idx["main.prod[5]"]].equals(snarkjs.bigInt(126)));
+        assert(witness[circuit.signalName2Idx["main.prod[6]"]].equals(snarkjs.bigInt(72)));
+    });
+});
+
+describe("LinearMultiplier", () => {
+    it("should be compilable", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
+        new snarkjs.Circuit(cirDef);
+    });
+
+    it("should have <= 26 constraints (4 bits/word, 2 words)", async () => {
+        // 2n(w+3) - 2
+        //  = 2 * 2 * (4 + 3) - 2
+        //  = 26
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        circuit.nConstraints.should.be.at.most(26);
+    });
+
+    it("should compute 1 * 1 = 1 (4 bits/word, 2 words)", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "a[0]": "1",
+            "a[1]": "0",
+            "b[0]": "1",
+            "b[1]": "0",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt(1)));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(0)));
+    });
+
+    it("should compute 1,0 * 1,0 = 1,0,0 (4 bits/word, 2 words)", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "a[0]": "0",
+            "a[1]": "1",
+            "b[0]": "0",
+            "b[1]": "1",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(1)));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(0)));
+    });
+
+    it("should compute 1,3 * 3,0 = 0,3,9,0 (4 bits/word, 2 words)", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "a[0]": "3",
+            "a[1]": "1",
+            "b[0]": "0",
+            "b[1]": "3",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(9)));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(3)));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(0)));
+    });
+
+    it("should compute 3,0 * 1,3  = 0,3,9,0 (4 bits/word, 2 words)", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "a[0]": "0",
+            "a[1]": "3",
+            "b[0]": "3",
+            "b[1]": "1",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(9)));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(3)));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(0)));
+    });
+
+    it("should compute 8,7 * 9,3  = 4,13,8,5 (4 bits/word, 2 words)", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "a[0]": "7",
+            "a[1]": "8",
+            "b[0]": "3",
+            "b[1]": "9",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt(5)));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(8)));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(13)));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(4)));
+    });
+
+    it("should compute 9,3 * 8,7 = 4,13,8,5 (4 bits/word, 2 words)", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "a[0]": "3",
+            "a[1]": "9",
+            "b[0]": "7",
+            "b[1]": "8",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt(5)));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(8)));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(13)));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(4)));
+    });
+    it("should compute 15,15 * 15,15 = 15,14,0,1 (4 bits/word, 2 words)", async () => {
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "a[0]": "15",
+            "a[1]": "15",
+            "b[0]": "15",
+            "b[1]": "15",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt(1)));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(14)));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(15)));
+    });
+
+    it("should have <= 1070 constraints (64 bits/word, 8 words)", async () => {
+        // 2n(w+3) - 2
+        //  = 2 * 8 * (64 + 3) - 2
+        //  = 1070
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_64bit_8word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        circuit.nConstraints.should.be.at.most(1070);
+    });
+
+    it("should have <= 4286 constraints (64 bits/word, 32 words)", async () => {
+        // 2n(w+3) - 2
+        //  = 2 * 32 * (64 + 3) - 2
+        //  = 4286
+        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_64bit_32word.circom"));
+        const circuit = new snarkjs.Circuit(cirDef);
+        circuit.nConstraints.should.be.at.most(4286);
+    });
+});
