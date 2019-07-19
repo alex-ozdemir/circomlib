@@ -281,3 +281,43 @@ template LinearMultiplier(w, n) {
         prod[i] <== carrier.out[i];
     }
 }
+
+template LinearMultiplierWithAdd(w, n) {
+    // Implementation of _xjSnark_'s multiplication for n-word numbers.
+    //
+    //     a * b + c == prod
+    //
+    // Uses $2n - 1$ constraints for polynomial multiplication.
+    // Uses $2n(w + 1)$ for bit decomposition of the result.
+    // Uses $2n - 1$ constraints for bit decomposition.
+    // For a total of $2n(w + 3) - 2$ constraints.
+
+    signal input a[n];
+    signal input b[n];
+    signal input c[n];
+
+    signal output prod[2 * n];
+
+    component polyMultiplier = PolynomialMultiplier(n);
+    component carrier = Carry(w, 2 * n - 1);
+
+    // Put our inputs into the polynomial multiplier
+    for (var i = 0; i < n; i++) {
+        polyMultiplier.a[i] <== a[i];
+        polyMultiplier.b[i] <== b[i];
+    }
+
+    // Put the polynomial product into the carrier
+    for (var i = 0; i < 2 * n - 1; i++) {
+        if (i < n) {
+            carrier.in[i] <== polyMultiplier.prod[i] + c[i];
+        } else {
+            carrier.in[i] <== polyMultiplier.prod[i];
+        }
+    }
+
+    // Take the carrier output as our own
+    for (var i = 0; i < 2 * n; i++) {
+        prod[i] <== carrier.out[i];
+    }
+}

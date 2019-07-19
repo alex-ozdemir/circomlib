@@ -458,3 +458,4 @@ describe("LinearMultiplier", () => {
         circuit.nConstraints.should.be.at.most(4286);
     });
 });
+
