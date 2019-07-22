@@ -9,19 +9,23 @@ const assert = chai.assert;
 chai.should();
 
 describe("WordMultiplier", () => {
+
+    var cirDef;
+
+    before(async () => {
+        cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "word_multiplier_4.circom"));
+    });
+
     it("should be compilable", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "word_multiplier_4.circom"));
         new snarkjs.Circuit(cirDef);
     });
 
     it("should have 4 + 4 + 1 constraints (4 bits/word)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "word_multiplier_4.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         circuit.nConstraints.should.equal(4 + 4 + 1);
     });
 
     it("should compute 15 * 3 = 2,13 (4 bits/word)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "word_multiplier_4.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a": "15",
@@ -35,19 +39,22 @@ describe("WordMultiplier", () => {
 });
 
 describe("WordMultiplierWithCarry", () => {
+    var cirDef;
+
+    before(async () => {
+        cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "word_multiplier_carry_4.circom"));
+    });
+
     it("should be compilable", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "word_multiplier_carry_4.circom"));
         new snarkjs.Circuit(cirDef);
     });
 
     it("should have 4 + 4 + 1 constraints (4 bits/word)", async () => {
         // 2w + 1
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "word_multiplier_carry_4.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         circuit.nConstraints.should.equal(4 + 4 + 1);
     });
     it("should compute 15 * 3 + 6 = 3,3 (4 bits/word)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "word_multiplier_carry_4.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a": "15",
@@ -59,7 +66,6 @@ describe("WordMultiplierWithCarry", () => {
         assert(witness[circuit.signalName2Idx["main.carryOut"]].equals(snarkjs.bigInt(3)));
     });
     it("should compute 15 * 15 + 15 + 15 = 15,15 (4 bits/word)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "word_multiplier_carry_4.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a": "15",
@@ -73,20 +79,23 @@ describe("WordMultiplierWithCarry", () => {
 });
 
 describe("NBy1Multiplier", () => {
+    var cirDef;
+
+    before(async () => {
+        cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "n_by_1_mult_4bit_2word.circom"));
+    });
+
     it("should be compilable", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "n_by_1_mult_4bit_2word.circom"));
         new snarkjs.Circuit(cirDef);
     });
 
     it("should have 18 constraints", async () => {
         // n (2w + 1)
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "n_by_1_mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         circuit.nConstraints.should.equal(18);
     });
 
     it("should compute 3,3 * 13 = 2,9,7 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "n_by_1_mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a[0]": "3",
@@ -100,7 +109,6 @@ describe("NBy1Multiplier", () => {
         assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(2)));
     });
     it("should compute 15,15 * 15 + 15,15 = 15,15,0 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "n_by_1_mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a[0]": "15",
@@ -116,20 +124,23 @@ describe("NBy1Multiplier", () => {
 });
 
 describe("Multiplier", () => {
+    var cirDef;
+
+    before(async () => {
+        cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
+    });
+
     it("should be compilable", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
         new snarkjs.Circuit(cirDef);
     });
 
     it("should have 36 constraints (4 bits/word, 2 words)", async () => {
         // n * n * (2w + 1)
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         circuit.nConstraints.should.equal(36);
     });
 
     it("should compute 1 * 1 = 1 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a[0]": "1",
@@ -144,7 +155,6 @@ describe("Multiplier", () => {
     });
 
     it("should compute 1,0 * 1,0 = 1,0,0 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a[0]": "0",
@@ -159,7 +169,6 @@ describe("Multiplier", () => {
     });
 
     it("should compute 1,3 * 3,0 = 0,3,9,0 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a[0]": "3",
@@ -174,7 +183,6 @@ describe("Multiplier", () => {
     });
 
     it("should compute 3,0 * 1,3  = 0,3,9,0 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a[0]": "0",
@@ -189,7 +197,6 @@ describe("Multiplier", () => {
     });
 
     it("should compute 8,7 * 9,3  = 4,13,8,5 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a[0]": "7",
@@ -204,7 +211,6 @@ describe("Multiplier", () => {
     });
 
     it("should compute 9,3 * 8,7 = 4,13,8,5 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a[0]": "3",
@@ -218,7 +224,6 @@ describe("Multiplier", () => {
         assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(4)));
     });
     it("should compute 15,15 * 15,15 = 15,14,0,1 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_4bit_2word.circom"));
         const circuit = new snarkjs.Circuit(cirDef);
         const witness = circuit.calculateWitness({
             "a[0]": "15",
@@ -242,21 +247,24 @@ describe("Multiplier", () => {
 });
 
 describe("PolynomialMultiplier", () => {
+    var polymult_d4;
+
+    before(async () => {
+        polymult_d4 = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
+    });
+
     it("should be compilable", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
-        new snarkjs.Circuit(cirDef);
+        new snarkjs.Circuit(polymult_d4);
     });
 
     it("should have 7 constraints (degree <4)", async () => {
         // 2 * d - 1
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(polymult_d4);
         circuit.nConstraints.should.equal(7);
     });
 
     it("should compute 1 * 1 = 1 (degree <4)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(polymult_d4);
         const witness = circuit.calculateWitness({
             "a[0]": "1",
             "a[1]": "0",
@@ -277,8 +285,7 @@ describe("PolynomialMultiplier", () => {
     });
 
     it("should compute 1,0,3 * 3,1 = 3,1,9,3 (degree <4)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(polymult_d4);
         const witness = circuit.calculateWitness({
             "a[0]": "3",
             "a[1]": "0",
@@ -299,8 +306,7 @@ describe("PolynomialMultiplier", () => {
     });
 
     it("should compute (3 + 4x + 5x^2 + 6x^3)(9 + 10x + 11x^2 + 12x^3) = 72 x^6 + 126 x^5 + 163 x^4 + 184 x^3 + 118 x^2 + 66 x + 27 (degree <4)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(polymult_d4);
         const witness = circuit.calculateWitness({
             "a[0]": "3",
             "a[1]": "4",
@@ -322,23 +328,31 @@ describe("PolynomialMultiplier", () => {
 });
 
 describe("LinearMultiplier", () => {
+
+    var linmult_4bit_2word;
+    var linmult_64bit_8word;
+    var linmult_64bit_32word;
+
+    before(async () => {
+        linmult_4bit_2word = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
+        linmult_64bit_8word = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_64bit_8word.circom"));
+        linmult_64bit_32word = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_64bit_32word.circom"));
+    });
+
     it("should be compilable", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
-        new snarkjs.Circuit(cirDef);
+        new snarkjs.Circuit(linmult_4bit_2word);
     });
 
     it("should have <= 26 constraints (4 bits/word, 2 words)", async () => {
         // 2n(w+3) - 2
         //  = 2 * 2 * (4 + 3) - 2
         //  = 26
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(linmult_4bit_2word);
         circuit.nConstraints.should.be.at.most(26);
     });
 
     it("should compute 1 * 1 = 1 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(linmult_4bit_2word);
         const witness = circuit.calculateWitness({
             "a[0]": "1",
             "a[1]": "0",
@@ -352,8 +366,7 @@ describe("LinearMultiplier", () => {
     });
 
     it("should compute 1,0 * 1,0 = 1,0,0 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(linmult_4bit_2word);
         const witness = circuit.calculateWitness({
             "a[0]": "0",
             "a[1]": "1",
@@ -367,8 +380,7 @@ describe("LinearMultiplier", () => {
     });
 
     it("should compute 1,3 * 3,0 = 0,3,9,0 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(linmult_4bit_2word);
         const witness = circuit.calculateWitness({
             "a[0]": "3",
             "a[1]": "1",
@@ -382,8 +394,7 @@ describe("LinearMultiplier", () => {
     });
 
     it("should compute 3,0 * 1,3  = 0,3,9,0 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(linmult_4bit_2word);
         const witness = circuit.calculateWitness({
             "a[0]": "0",
             "a[1]": "3",
@@ -397,8 +408,7 @@ describe("LinearMultiplier", () => {
     });
 
     it("should compute 8,7 * 9,3  = 4,13,8,5 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(linmult_4bit_2word);
         const witness = circuit.calculateWitness({
             "a[0]": "7",
             "a[1]": "8",
@@ -412,8 +422,7 @@ describe("LinearMultiplier", () => {
     });
 
     it("should compute 9,3 * 8,7 = 4,13,8,5 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(linmult_4bit_2word);
         const witness = circuit.calculateWitness({
             "a[0]": "3",
             "a[1]": "9",
@@ -426,8 +435,7 @@ describe("LinearMultiplier", () => {
         assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(4)));
     });
     it("should compute 15,15 * 15,15 = 15,14,0,1 (4 bits/word, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_4bit_2word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(linmult_4bit_2word);
         const witness = circuit.calculateWitness({
             "a[0]": "15",
             "a[1]": "15",
@@ -444,8 +452,7 @@ describe("LinearMultiplier", () => {
         // 2n(w+3) - 2
         //  = 2 * 8 * (64 + 3) - 2
         //  = 1070
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_64bit_8word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(linmult_64bit_8word);
         circuit.nConstraints.should.be.at.most(1070);
     });
 
@@ -453,8 +460,7 @@ describe("LinearMultiplier", () => {
         // 2n(w+3) - 2
         //  = 2 * 32 * (64 + 3) - 2
         //  = 4286
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "linmult_64bit_32word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(linmult_64bit_32word);
         circuit.nConstraints.should.be.at.most(4286);
     });
 });

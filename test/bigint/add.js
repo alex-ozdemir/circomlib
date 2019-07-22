@@ -9,20 +9,27 @@ const assert = chai.assert;
 chai.should();
 
 describe("FullAdder", () => {
+    var fullAdder8;
+    var fullAdder32;
+    var fullAdder64;
+
+    before(async () => {
+        fullAdder8 = await compiler(path.join(__dirname, "..", "circuits", "bigint", "full_adder_8.circom"));
+        fullAdder32 = await compiler(path.join(__dirname, "..", "circuits", "bigint", "full_adder_32.circom"));
+        fullAdder64 = await compiler(path.join(__dirname, "..", "circuits", "bigint", "full_adder_64.circom"));
+    });
 
     it("should have 13 constraints (8bit)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "full_adder_8.circom"));
 
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(fullAdder8);
 
         circuit.nConstraints.should.equal(13);
     });
 
     it("should add small numbers (8bit)", async () => {
 
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "full_adder_8.circom"));
 
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(fullAdder8);
 
         const witness = circuit.calculateWitness({ "in1": "5", "in2": "12", "in3": "1" });
 
@@ -51,9 +58,8 @@ describe("FullAdder", () => {
 
     it("should handle a single carry over (8bit)", async () => {
 
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "full_adder_8.circom"));
 
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(fullAdder8);
 
         const witness = circuit.calculateWitness({ "in1": "255", "in2": "254", "in3": "0" });
 
@@ -76,9 +82,8 @@ describe("FullAdder", () => {
 
     it("should handle a double carry over (8bit)", async () => {
 
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "full_adder_8.circom"));
 
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(fullAdder8);
 
         const witness = circuit.calculateWitness({ "in1": "255", "in2": "254", "in3": "3" });
 
@@ -101,9 +106,8 @@ describe("FullAdder", () => {
 
     it("should handle a single carry (64bit)", async () => {
 
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "full_adder_64.circom"));
 
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(fullAdder64);
 
         const witness = circuit.calculateWitness({ "in1": "18446744073709551615", "in2": "4294967296", "in3": "1" });
 
@@ -114,9 +118,8 @@ describe("FullAdder", () => {
 
     it("should handle a single carry (32bit)", async () => {
 
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "full_adder_32.circom"));
 
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(fullAdder32);
 
         const witness = circuit.calculateWitness({ "in1": "4294967295", "in2": "4294967295", "in3": "1" });
 
@@ -128,25 +131,27 @@ describe("FullAdder", () => {
 });
 
 describe("RippleCarryAdder", () => {
-    it("should be compilable", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "rcadder_4bits_2words.circom"));
+    var rcAdder42;
 
-        new snarkjs.Circuit(cirDef);
+    before(async () => {
+        rcAdder42 = await compiler(path.join(__dirname, "..", "circuits", "bigint", "rcadder_4bits_2words.circom"));
+    });
+
+    it("should be compilable", async () => {
+        new snarkjs.Circuit(rcAdder42);
     });
 
     it("should have 13 constraints (4 bits, 2 words)", async () => {
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "rcadder_4bits_2words.circom"));
 
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(rcAdder42);
 
         circuit.nConstraints.should.equal(13);
     });
 
     it("should compute 0 + 0 (4 bits, 2 words)", async () => {
 
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "rcadder_4bits_2words.circom"));
 
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(rcAdder42);
         const witness = circuit.calculateWitness({
             "a[0]": "0",
             "a[1]": "0",
@@ -163,9 +168,8 @@ describe("RippleCarryAdder", () => {
 
     it("should compute 16 + 0 (4 bits, 2 words)", async () => {
 
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "rcadder_4bits_2words.circom"));
 
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(rcAdder42);
         const witness = circuit.calculateWitness({
             "a[0]": "0",
             "a[1]": "1",
@@ -182,8 +186,7 @@ describe("RippleCarryAdder", () => {
 
     it("should compute 2,1 + 15,15  (4 bits, 2 words)", async () => {
 
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "rcadder_4bits_2words.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
+        const circuit = new snarkjs.Circuit(rcAdder42);
         const witness = circuit.calculateWitness({
             "a[0]": "1",
             "a[1]": "2",
