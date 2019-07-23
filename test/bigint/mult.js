@@ -248,9 +248,11 @@ describe("Multiplier", () => {
 
 describe("PolynomialMultiplier", () => {
     var polymult_d4;
+    var polymult_d32;
 
     before(async () => {
         polymult_d4 = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d4.circom"));
+        polymult_d32 = await compiler(path.join(__dirname, "..", "circuits", "bigint", "polymult_d32.circom"));
     });
 
     it("should be compilable", async () => {
@@ -324,6 +326,182 @@ describe("PolynomialMultiplier", () => {
         assert(witness[circuit.signalName2Idx["main.prod[4]"]].equals(snarkjs.bigInt(163)));
         assert(witness[circuit.signalName2Idx["main.prod[5]"]].equals(snarkjs.bigInt(126)));
         assert(witness[circuit.signalName2Idx["main.prod[6]"]].equals(snarkjs.bigInt(72)));
+    });
+
+    it("should compute a big square (deg <32)", async () => {
+        const circuit = new snarkjs.Circuit(polymult_d32);
+        const witness = circuit.calculateWitness({
+            "a[0]": "4819187580044832333",
+            "a[1]": "9183764011217009606",
+            "a[2]": "11426964127496009747",
+            "a[3]": "17898263845095661790",
+            "a[4]": "12102522037140783322",
+            "a[5]": "4029304176671511763",
+            "a[6]": "11339410859987005436",
+            "a[7]": "12120243430436644729",
+            "a[8]": "2888435820322958146",
+            "a[9]": "7612614626488966390",
+            "a[10]": "3872170484348249672",
+            "a[11]": "9589147526444685354",
+            "a[12]": "16391157694429928307",
+            "a[13]": "12256166884204507566",
+            "a[14]": "4257963982333550934",
+            "a[15]": "916988490704",
+            "a[16]": "0",
+            "a[17]": "0",
+            "a[18]": "0",
+            "a[19]": "0",
+            "a[20]": "0",
+            "a[21]": "0",
+            "a[22]": "0",
+            "a[23]": "0",
+            "a[24]": "0",
+            "a[25]": "0",
+            "a[26]": "0",
+            "a[27]": "0",
+            "a[28]": "0",
+            "a[29]": "0",
+            "a[30]": "0",
+            "a[31]": "0",
+            "b[0]": "4819187580044832333",
+            "b[1]": "9183764011217009606",
+            "b[2]": "11426964127496009747",
+            "b[3]": "17898263845095661790",
+            "b[4]": "12102522037140783322",
+            "b[5]": "4029304176671511763",
+            "b[6]": "11339410859987005436",
+            "b[7]": "12120243430436644729",
+            "b[8]": "2888435820322958146",
+            "b[9]": "7612614626488966390",
+            "b[10]": "3872170484348249672",
+            "b[11]": "9589147526444685354",
+            "b[12]": "16391157694429928307",
+            "b[13]": "12256166884204507566",
+            "b[14]": "4257963982333550934",
+            "b[15]": "916988490704",
+            "b[16]": "0",
+            "b[17]": "0",
+            "b[18]": "0",
+            "b[19]": "0",
+            "b[20]": "0",
+            "b[21]": "0",
+            "b[22]": "0",
+            "b[23]": "0",
+            "b[24]": "0",
+            "b[25]": "0",
+            "b[26]": "0",
+            "b[27]": "0",
+            "b[28]": "0",
+            "b[29]": "0",
+            "b[30]": "0",
+            "b[31]": "0",
+        });
+        assert(witness[circuit.signalName2Idx["main.prod[0]"]].equals(snarkjs.bigInt( "23224568931658367244754058218082222889")));
+        assert(witness[circuit.signalName2Idx["main.prod[1]"]].equals(snarkjs.bigInt( "88516562921839445888640380379840781596")));
+        assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt( "194478888615417946406783868151393774738")));
+        assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt( "382395265476432217957523230769986571504")));
+        assert(witness[circuit.signalName2Idx["main.prod[4]"]].equals(snarkjs.bigInt( "575971019676008360859069855433378813941")));
+        assert(witness[circuit.signalName2Idx["main.prod[5]"]].equals(snarkjs.bigInt( "670174995752918677131397897218932582682")));
+        assert(witness[circuit.signalName2Idx["main.prod[6]"]].equals(snarkjs.bigInt( "780239872348808029089572423614905198300")));
+        assert(witness[circuit.signalName2Idx["main.prod[7]"]].equals(snarkjs.bigInt( "850410093737715640261630122959874522628")));
+        assert(witness[circuit.signalName2Idx["main.prod[8]"]].equals(snarkjs.bigInt( "800314959349304909735238452892956199392")));
+        assert(witness[circuit.signalName2Idx["main.prod[9]"]].equals(snarkjs.bigInt( "906862855407309870283714027678210238070")));
+        assert(witness[circuit.signalName2Idx["main.prod[10]"]].equals(snarkjs.bigInt( "967727310654811444144097720329196927129")));
+        assert(witness[circuit.signalName2Idx["main.prod[11]"]].equals(snarkjs.bigInt( "825671020037461535758117365587238596380")));
+        assert(witness[circuit.signalName2Idx["main.prod[12]"]].equals(snarkjs.bigInt( "991281789723902700168027417052185830252")));
+        assert(witness[circuit.signalName2Idx["main.prod[13]"]].equals(snarkjs.bigInt( "1259367815833216292413970809061165585320")));
+        assert(witness[circuit.signalName2Idx["main.prod[14]"]].equals(snarkjs.bigInt( "1351495628781923848799708082622582598675")));
+        assert(witness[circuit.signalName2Idx["main.prod[15]"]].equals(snarkjs.bigInt( "1451028634949220760698564802414695011932")));
+        assert(witness[circuit.signalName2Idx["main.prod[16]"]].equals(snarkjs.bigInt( "1290756126635958771067082204577975256756")));
+        assert(witness[circuit.signalName2Idx["main.prod[17]"]].equals(snarkjs.bigInt( "936482288980049848345464202850902738826")));
+        assert(witness[circuit.signalName2Idx["main.prod[18]"]].equals(snarkjs.bigInt( "886330568585033438612679243731110283692")));
+        assert(witness[circuit.signalName2Idx["main.prod[19]"]].equals(snarkjs.bigInt( "823948310509772835433730556487356331346")));
+        assert(witness[circuit.signalName2Idx["main.prod[20]"]].equals(snarkjs.bigInt( "649341353489205691855914543942648985328")));
+        assert(witness[circuit.signalName2Idx["main.prod[21]"]].equals(snarkjs.bigInt( "497838205323760437611385487609464464168")));
+        assert(witness[circuit.signalName2Idx["main.prod[22]"]].equals(snarkjs.bigInt( "430091148520710550273018448938020664564")));
+        assert(witness[circuit.signalName2Idx["main.prod[23]"]].equals(snarkjs.bigInt( "474098876922017329965321439330710234148")));
+        assert(witness[circuit.signalName2Idx["main.prod[24]"]].equals(snarkjs.bigInt( "536697574159375092388958994084813127393")));
+        assert(witness[circuit.signalName2Idx["main.prod[25]"]].equals(snarkjs.bigInt( "483446024935732188792400155524449880972")));
+        assert(witness[circuit.signalName2Idx["main.prod[26]"]].equals(snarkjs.bigInt( "289799562463011227421662267162524920264")));
+        assert(witness[circuit.signalName2Idx["main.prod[27]"]].equals(snarkjs.bigInt( "104372664369829937912234314161010649544")));
+        assert(witness[circuit.signalName2Idx["main.prod[28]"]].equals(snarkjs.bigInt( "18130279752377737976455635841349605284")));
+        assert(witness[circuit.signalName2Idx["main.prod[29]"]].equals(snarkjs.bigInt( "7809007931264072381739139035072")));
+        assert(witness[circuit.signalName2Idx["main.prod[30]"]].equals(snarkjs.bigInt( "840867892083599894415616")));
+        assert(witness[circuit.signalName2Idx["main.prod[31]"]].equals(snarkjs.bigInt( "0")));
+    });
+});
+
+describe("Carry", () => {
+    var cirDef;
+
+    before(async () => {
+        cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "carry_3_4.circom"));
+    });
+
+    it("should be compilable", async () => {
+        new snarkjs.Circuit(cirDef);
+    });
+
+    it("should have 5 * 3 + 4 constraints (3 bits, 4 words)", async () => {
+        // 2w + 1
+        const circuit = new snarkjs.Circuit(cirDef);
+        circuit.nConstraints.should.be.at.most(19);
+    });
+    it("should carry 0,0,0,0 into 0,0,0,0,0", async () => {
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "in[0]": "0",
+            "in[1]": "0",
+            "in[2]": "0",
+            "in[3]": "0",
+        });
+        assert(witness[circuit.signalName2Idx["main.out[0]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.out[1]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.out[2]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.out[3]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.out[4]"]].equals(snarkjs.bigInt(0)));
+    });
+    it("should carry 0,0,9,9 into 0,0,1,2,1", async () => {
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "in[0]": "9",
+            "in[1]": "9",
+            "in[2]": "0",
+            "in[3]": "0",
+        });
+        assert(witness[circuit.signalName2Idx["main.out[0]"]].equals(snarkjs.bigInt(1)));
+        assert(witness[circuit.signalName2Idx["main.out[1]"]].equals(snarkjs.bigInt(2)));
+        assert(witness[circuit.signalName2Idx["main.out[2]"]].equals(snarkjs.bigInt(1)));
+        assert(witness[circuit.signalName2Idx["main.out[3]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.out[4]"]].equals(snarkjs.bigInt(0)));
+    });
+    it("should carry 0,0,49,49 into 0,0,6,7,1", async () => {
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "in[0]": "49",
+            "in[1]": "49",
+            "in[2]": "0",
+            "in[3]": "0",
+        });
+        assert(witness[circuit.signalName2Idx["main.out[0]"]].equals(snarkjs.bigInt(1)));
+        assert(witness[circuit.signalName2Idx["main.out[1]"]].equals(snarkjs.bigInt(7)));
+        assert(witness[circuit.signalName2Idx["main.out[2]"]].equals(snarkjs.bigInt(6)));
+        assert(witness[circuit.signalName2Idx["main.out[3]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[circuit.signalName2Idx["main.out[4]"]].equals(snarkjs.bigInt(0)));
+    });
+    it("should carry 49,49,49,49 into 0,0,6,7,1", async () => {
+        const circuit = new snarkjs.Circuit(cirDef);
+        const witness = circuit.calculateWitness({
+            "in[0]": "49",
+            "in[1]": "49",
+            "in[2]": "49",
+            "in[3]": "49",
+        });
+        assert(witness[circuit.signalName2Idx["main.out[0]"]].equals(snarkjs.bigInt(1)));
+        assert(witness[circuit.signalName2Idx["main.out[1]"]].equals(snarkjs.bigInt(7)));
+        assert(witness[circuit.signalName2Idx["main.out[2]"]].equals(snarkjs.bigInt(7)));
+        assert(witness[circuit.signalName2Idx["main.out[3]"]].equals(snarkjs.bigInt(7)));
+        assert(witness[circuit.signalName2Idx["main.out[4]"]].equals(snarkjs.bigInt(6)));
     });
 });
 

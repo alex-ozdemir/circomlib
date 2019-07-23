@@ -13,25 +13,25 @@ template RabinVerifier(w, n) {
     signal input msg[n];
     signal input pk[n];
 
-    signal input x[n];
+    signal x[n];
 
-    // Compute the x
-    // Doesn't work because computation types are in F
-    // compute {
-    //     var sigAcc = 0;
-    //     var msgAcc = 0;
-    //     var pkAcc = 0;
-    //     for (var i = 0; i < n; i++) {
-    //         sigAcc += sig[i] << (w * i);
-    //         msgAcc += msg[i] << (w * i);
-    //         pkAcc  += pk[i]  << (w * i);
-    //     }
-    //     var xAcc = sigAcc;
-    //     for (var i = 0; i < n; i++) {
-    //         x[i] <-- xAcc % (2 ** w);
-    //         xAcc = xAcc >> w;
-    //     }
-    // }
+    //Compute the x
+    //Doesn't work because computation types are in F
+    compute {
+        int sigAcc = 0;
+        int msgAcc = int(0);
+        int pkAcc = int(0);
+        for (int i = int(0); i < int(n); i++) {
+            sigAcc += int(sig[i]) << (int(w) * i);
+            msgAcc += int(msg[i]) << (int(w) * i);
+            pkAcc  += int(pk[i])  << (int(w) * i);
+        }
+        int xAcc = (sigAcc * sigAcc - msgAcc) / pkAcc;
+        for (int i = int(0); i < int(n); i++) {
+            x[i] <-- field(xAcc % int(2 ** w));
+            xAcc = xAcc >> int(w);
+        }
+    }
 
     // Verify the wordness of x lest our multipliers break
     component xBits[n];

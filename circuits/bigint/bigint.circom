@@ -23,15 +23,15 @@ template FullAdder(w) {
     rawSum === carry * 2 ** w + sum;
 
     component sumBitDecomp = Num2Bits(w);
-    sumBitDecomp.in <-- sum;
+    sumBitDecomp.in <== sum;
     for (var i = 0; i < w; i++) {
-        sumBitDecomp.out[i] --> sumBits[i];
+        sumBitDecomp.out[i] ==> sumBits[i];
     }
 
     component carryBitDecomp = Num2Bits(2);
-    carryBitDecomp.in <-- carry;
+    carryBitDecomp.in <== carry;
     for (var i = 0; i < 2; i++) {
-        carryBitDecomp.out[i] --> carryBits[i];
+        carryBitDecomp.out[i] ==> carryBits[i];
     }
 }
 
@@ -232,7 +232,7 @@ template Carry(w, n) {
 
     for (var i = 0; i < n; i++) {
         out[i] <-- (in[i] + carry[i]) % (2 ** w);
-        carry[i + 1] <-- (in[i] + carry[i]) >> w;
+        carry[i + 1] <-- (in[i] + carry[i]) \ (2 ** w);
 
         // Verify we've split correctly
         carry[i + 1] * (2 ** w) + out[i] === carry[i] + in[i];
