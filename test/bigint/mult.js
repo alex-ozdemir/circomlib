@@ -442,10 +442,11 @@ describe("Carry", () => {
         new snarkjs.Circuit(cirDef);
     });
 
-    it("should have 5 * 3 + 4 constraints (3 bits, 4 words)", async () => {
-        // 2w + 1
+    it("should have at most 16 constraints (3 bits, 4 words)", async () => {
+        // n(w+1)
+        // = 4 * 4 = 16
         const circuit = new snarkjs.Circuit(cirDef);
-        circuit.nConstraints.should.be.at.most(19);
+        circuit.nConstraints.should.be.at.most(16);
     });
     it("should carry 0,0,0,0 into 0,0,0,0,0", async () => {
         const circuit = new snarkjs.Circuit(cirDef);

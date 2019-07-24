@@ -321,3 +321,53 @@ template LinearMultiplierWithAdd(w, n) {
         prod[i] <== carrier.out[i];
     }
 }
+
+template Quotient(w, n) {
+    // Asserts that the quotient actually requires w*n bits
+    // $2n(w + 3) - 2$ constraints for the multiplier
+    // Another bitdecomp for n * w, yields:
+    //    $3n(w + 2) - 2$
+    signal input dividend[2 * n];
+    signal input divisor[n];
+    signal output quotient[n];
+    signal output remainder[n];
+
+    compute {
+        int dividendAcc = int(0);
+        int divisorAcc = int(0);
+        for (int i = int(0); i < int(2 * n); i++) {
+            dividendAcc += int(dividend[i]) << (int(w) * i);
+        }
+        for (int i = int(0); i < int(n); ++i) {
+            divisorAcc += int(divisor[i]) << (int(w) * i);
+        }
+        int quotientAcc = dividendAcc / divisorAcc;
+        int remainderAcc = dividendAcc % divisorAcc;
+        for (int i = int(0); i < int(n); ++i) {
+            quotient[i] <-- field(quotientAcc % int(2 ** w));
+            quotientAcc = quotientAcc >> int(w);
+        }
+        for (int i = int(0); i < int(n); ++i) {
+            remainder[i] <-- field(remainderAcc % int(2 ** w));
+            remainderAcc = remainderAcc >> int(w);
+        }
+        quotientAcc === int(0);
+        remainderAcc === int(0);
+    }
+
+    component remainderDecomp[n];
+    for (var i = 0; i < n; i++) {
+        remainderDecomp[i] = Num2Bits(w);
+        remainderDecomp[i].in <== remainder[i];
+    }
+
+    component multiplier = LinearMultiplierWithAdd(w, n);
+    for (var i = 0; i < n; i++) {
+        multiplier.a[i] <== quotient[i];
+        multiplier.b[i] <== divisor[i];
+        multiplier.c[i] <== remainder[i];
+    }
+    for (var i = 0; i < 2 * n; i++) {
+        multiplier.prod[i] === dividend[i];
+    }
+}

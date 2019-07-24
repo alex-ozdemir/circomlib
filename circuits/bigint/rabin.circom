@@ -18,7 +18,7 @@ template RabinVerifier(w, n) {
     //Compute the x
     //Doesn't work because computation types are in F
     compute {
-        int sigAcc = 0;
+        int sigAcc = int(0);
         int msgAcc = int(0);
         int pkAcc = int(0);
         for (int i = int(0); i < int(n); i++) {
