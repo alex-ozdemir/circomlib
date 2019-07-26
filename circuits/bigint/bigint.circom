@@ -217,14 +217,17 @@ template PolynomialMultiplier(d) {
 }
 
 template Carry(w, n) {
-    // Given a w-bit, n-word number with digits that may be too large,
-    // produces the (n+1)-word number with appropriate digits.
+    // Given a 2w-bit, n-word number
+    // produces the (n+1)-word number w-bit chunks.
     // Asserts that the number actually fits in (n+1) words.
+    //
+    // Uses $(2n+1)(w+1)$ constraints
     signal input in[n];
 
     signal output out[n+1];
 
     component outBitDecomps[n+1];
+    component carryBitDecomps[n];
 
     signal carry[n+1];
 
@@ -237,25 +240,52 @@ template Carry(w, n) {
         // Verify we've split correctly
         carry[i + 1] * (2 ** w) + out[i] === carry[i] + in[i];
 
-        // Verify our low-order part fits in w bits.
+        // Verify our parts fit in w bits.
         outBitDecomps[i] = Num2Bits(w);
         outBitDecomps[i].in <== out[i];
+        carryBitDecomps[i] = Num2Bits(w + 1);
+        carryBitDecomps[i].in <== carry[i + 1];
     }
 
     // The final carry is our final word
     out[n] <== carry[n];
+}
 
-    outBitDecomps[n] = Num2Bits(w);
-    outBitDecomps[n].in <== out[n];
+template CarriesToZero(w, n) {
+    // Given a 2w-bit, n-word number, verifies that after carries it is 0.
+    // Uses ~n(w+2) constraints.
+    signal input in[n];
+
+    component carryBitDecomps[n - 1];
+
+    signal carry[n + 1];
+
+    carry[0] <== 0;
+
+    for (var i = 0; i < n; i++) {
+        carry[i + 1] <-- (in[i] + carry[i]) \ (2 ** w);
+
+        // Verify we've split correctly
+        carry[i + 1] * (2 ** w) === carry[i] + in[i];
+
+        // Verify our parts fit in w bits.
+        if (i < n - 1) {
+            carryBitDecomps[i] = Num2Bits(w+1);
+            carryBitDecomps[i].in <== carry[i + 1];
+        } else {
+            // The final carry is our final word -- must be zero
+            carry[i + 1] === 0;
+        }
+    }
+
 }
 
 template LinearMultiplier(w, n) {
     // Implementation of _xjSnark_'s multiplication for n-word numbers.
     //
     // Uses $2n - 1$ constraints for polynomial multiplication.
-    // Uses $2n(w + 1)$ for bit decomposition of the result.
-    // Uses $2n - 1$ constraints for bit decomposition.
-    // For a total of $2n(w + 3) - 2$ constraints.
+    // Uses $2nw + n + w$ carrying
+    // For a total of $2nw + 4n + w - 1$ constraints.
 
     signal input a[n];
     signal input b[n];
@@ -290,7 +320,7 @@ template LinearMultiplierWithAdd(w, n) {
     // Uses $2n - 1$ constraints for polynomial multiplication.
     // Uses $2n(w + 1)$ for bit decomposition of the result.
     // Uses $2n - 1$ constraints for bit decomposition.
-    // For a total of $2n(w + 3) - 2$ constraints.
+    // For a total of $2nw + 4n + w - 1$ constraints.
 
     signal input a[n];
     signal input b[n];
@@ -369,5 +399,78 @@ template Quotient(w, n) {
     }
     for (var i = 0; i < 2 * n; i++) {
         multiplier.prod[i] === dividend[i];
+    }
+}
+
+template MultiplierReducer(w, n) {
+    // Computes prod and verifies that `prod = a * b (mod modulus)
+    // Constraints:
+    //   2(2n - 1) for two polynomial multipliers
+    //   (w + 1)(2(2n - 1) + 1) for a 2n-word carry
+    //   Total:
+    //      (w + 2)(4n - 1) - 1
+    signal input a[n];
+    signal input b[n];
+    signal input modulus[n];
+
+    signal quotient[n];
+
+    signal output prod[n];
+
+    compute {
+        int aAcc = int(0);
+        int bAcc = int(0);
+        int mAcc = int(0);
+        for (int i = int(0); i < int(n); i++) {
+            aAcc += int(a[i]) << (int(w) * i);
+            bAcc += int(b[i]) << (int(w) * i);
+            mAcc += int(modulus[i]) << (int(w) * i);
+        }
+        int fullProdAcc = aAcc * bAcc;
+        int quotientAcc = fullProdAcc / mAcc;
+        int prodAcc = fullProdAcc % mAcc;
+
+        for (int i = int(0); i < int(n); ++i) {
+            quotient[i] <-- field(quotientAcc % int(2 ** w));
+            quotientAcc = quotientAcc >> int(w);
+        }
+        for (int i = int(0); i < int(n); ++i) {
+            prod[i] <-- field(prodAcc % int(2 ** w));
+            prodAcc = prodAcc >> int(w);
+        }
+
+        quotientAcc === int(0);
+        prodAcc === int(0);
+    }
+
+    // Verify that the remainder and quotient are w-bits, n-chunks.
+    component prodDecomp[n];
+    for (var i = 0; i < n; i++) {
+        prodDecomp[i] = Num2Bits(w);
+        prodDecomp[i].in <== prod[i];
+    }
+
+    component quotientDecomp[n];
+    for (var i = 0; i < n; i++) {
+        quotientDecomp[i] = Num2Bits(w);
+        quotientDecomp[i].in <== quotient[i];
+    }
+
+    component left = PolynomialMultiplier(n);
+    component right = PolynomialMultiplier(n);
+    for (var i = 0; i < n; ++i) {
+        left.a[i] <== a[i];
+        left.b[i] <== b[i];
+        right.a[i] <== quotient[i];
+        right.b[i] <== modulus[i];
+    }
+
+    component carry = CarriesToZero(w, 2 * n - 1);
+    for (var i = 0; i < 2 * n - 1; ++i) {
+        if (i < n) {
+            carry.in[i] <== left.prod[i] - right.prod[i] - prod[i];
+        } else {
+            carry.in[i] <== left.prod[i] - right.prod[i];
+        }
     }
 }

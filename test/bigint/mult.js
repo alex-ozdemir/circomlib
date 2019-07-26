@@ -442,11 +442,12 @@ describe("Carry", () => {
         new snarkjs.Circuit(cirDef);
     });
 
-    it("should have at most 16 constraints (3 bits, 4 words)", async () => {
-        // n(w+1)
-        // = 4 * 4 = 16
+    it("should have at most 35 constraints (3 bits, 4 words)", async () => {
+        // 2nw + 2n + w
+        // = 24 + 8 + 3
+        // = 35
         const circuit = new snarkjs.Circuit(cirDef);
-        circuit.nConstraints.should.be.at.most(16);
+        circuit.nConstraints.should.be.at.most(35);
     });
     it("should carry 0,0,0,0 into 0,0,0,0,0", async () => {
         const circuit = new snarkjs.Circuit(cirDef);
@@ -522,12 +523,12 @@ describe("LinearMultiplier", () => {
         new snarkjs.Circuit(linmult_4bit_2word);
     });
 
-    it("should have <= 26 constraints (4 bits/word, 2 words)", async () => {
-        // 2n(w+3) - 2
-        //  = 2 * 2 * (4 + 3) - 2
-        //  = 26
+    it("should have <= 35 constraints (4 bits/word, 2 words)", async () => {
+        // 2nw + 4n + w - 1
+        //  = 24 + 8 + 4 - 1
+        //  = 35
         const circuit = new snarkjs.Circuit(linmult_4bit_2word);
-        circuit.nConstraints.should.be.at.most(26);
+        circuit.nConstraints.should.be.at.most(35);
     });
 
     it("should compute 1 * 1 = 1 (4 bits/word, 2 words)", async () => {
@@ -627,20 +628,17 @@ describe("LinearMultiplier", () => {
         assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(15)));
     });
 
-    it("should have <= 1070 constraints (64 bits/word, 8 words)", async () => {
-        // 2n(w+3) - 2
-        //  = 2 * 8 * (64 + 3) - 2
-        //  = 1070
+    it("should have <= 2123 constraints (64 bits/word, 8 words)", async () => {
+        // 2nw + 4n + w - 1
+        //  = 2048 + 32 + 64 - 1
+        //  = 2123
         const circuit = new snarkjs.Circuit(linmult_64bit_8word);
-        circuit.nConstraints.should.be.at.most(1070);
+        circuit.nConstraints.should.be.at.most(2123);
     });
 
-    it("should have <= 4286 constraints (64 bits/word, 32 words)", async () => {
-        // 2n(w+3) - 2
-        //  = 2 * 32 * (64 + 3) - 2
-        //  = 4286
+    it("should have <= 8192 constraints (64 bits/word, 32 words)", async () => {
         const circuit = new snarkjs.Circuit(linmult_64bit_32word);
-        circuit.nConstraints.should.be.at.most(4286);
+        circuit.nConstraints.should.be.at.most(9192);
     });
 });
 

@@ -43,6 +43,9 @@ def fastexp(b, e, m):
     else:
         return fastexp(b * b % m, e >> 1, m)
 
+def inbase(n, b):
+    return '' if n == 0 else inbase(n // b, b) + str(n % b)
+
 def emit(x, name):
     words = wordify(x)
     assert dewordify(words) == x
