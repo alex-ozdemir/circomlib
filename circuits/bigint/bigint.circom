@@ -1,5 +1,14 @@
 include "../bitify.circom";
 
+function log2(x) {
+    for (var i = 0; i < x; ++i) {
+        if (2 ** i >= x) {
+            return i;
+        }
+    }
+    return x;
+}
+
 template FullAdder(w) {
     // An adder which adds 3 w-bit numbers and produces:
     // * a w-bit result and
@@ -226,7 +235,7 @@ template Carry(w, n) {
 
     signal output out[n+1];
 
-    component outBitDecomps[n+1];
+    component outBitDecomps[n];
     component carryBitDecomps[n];
 
     signal carry[n+1];
@@ -251,33 +260,58 @@ template Carry(w, n) {
     out[n] <== carry[n];
 }
 
-template CarriesToZero(w, n) {
-    // Given a 2w-bit, n-word number, verifies that after carries it is 0.
-    // Uses ~n(w+2) constraints.
-    signal input in[n];
+template EqualWhenCarried(w, n) {
+    // Given two 2w-bit polynomials of degree <n which are supposed to be
+    // w(n+1)-bit numbers, enforces their equality.
+
+    // The naive approach is to add the two numbers chunk by chunk and:
+    //    a. Verify that they sum to zero along the way while
+    //    b. Propegating carries
+    // but this doesn't work because early sums might be negative.
+    // So instead we choose a special c and verify that a - b + c = c
+    // where c is chosen to insure that intermediate sums are non-negative.
+
+    // Constraints:
+    //   $n$ constraints for carry + output sums
+    //   $(n-1)(w + 1 + ceil(log2(n)))$ contraints for bit decompositions
+    //
+    //   $(n - 1)(w + 2 + ceil(log2(n))) + 1$ in total
+    signal input a[n];
+    signal input b[n];
 
     component carryBitDecomps[n - 1];
-
     signal carry[n + 1];
+    signal out[n];
+
+    var wordMax = n * (2 ** w - 1) * (2 ** w - 1) + (2 ** w - 1);
+    var carryBits = log2(2 * wordMax) - w;
+    var accumulatedExtra = 0;
 
     carry[0] <== 0;
 
     for (var i = 0; i < n; i++) {
-        carry[i + 1] <-- (in[i] + carry[i]) \ (2 ** w);
+        // We add an extra (wordMax) to the carry to ensure that it is positive
+        out[i] <--(a[i] - b[i] + carry[i] + wordMax) % (2 ** w);
+
+        carry[i + 1] <-- (a[i] - b[i] + carry[i] + wordMax) \ (2 ** w);
 
         // Verify we've split correctly
-        carry[i + 1] * (2 ** w) === carry[i] + in[i];
+        carry[i + 1] * (2 ** w) + out[i] === carry[i] + a[i] - b[i] + wordMax;
 
-        // Verify our parts fit in w bits.
+        // Verify that the output is correct
+        accumulatedExtra += wordMax;
+        out[i] === accumulatedExtra % (2 ** w);
+        accumulatedExtra = accumulatedExtra \ (2 ** w);
+
+        // Verify that our carry fits in `w` bits
         if (i < n - 1) {
-            carryBitDecomps[i] = Num2Bits(w+1);
+            carryBitDecomps[i] = Num2Bits(carryBits);
             carryBitDecomps[i].in <== carry[i + 1];
         } else {
-            // The final carry is our final word -- must be zero
-            carry[i + 1] === 0;
+            // The final carry should match the extra
+            carry[i + 1] === accumulatedExtra;
         }
     }
-
 }
 
 template LinearMultiplier(w, n) {
@@ -352,63 +386,14 @@ template LinearMultiplierWithAdd(w, n) {
     }
 }
 
-template Quotient(w, n) {
-    // Asserts that the quotient actually requires w*n bits
-    // $2n(w + 3) - 2$ constraints for the multiplier
-    // Another bitdecomp for n * w, yields:
-    //    $3n(w + 2) - 2$
-    signal input dividend[2 * n];
-    signal input divisor[n];
-    signal output quotient[n];
-    signal output remainder[n];
-
-    compute {
-        int dividendAcc = int(0);
-        int divisorAcc = int(0);
-        for (int i = int(0); i < int(2 * n); i++) {
-            dividendAcc += int(dividend[i]) << (int(w) * i);
-        }
-        for (int i = int(0); i < int(n); ++i) {
-            divisorAcc += int(divisor[i]) << (int(w) * i);
-        }
-        int quotientAcc = dividendAcc / divisorAcc;
-        int remainderAcc = dividendAcc % divisorAcc;
-        for (int i = int(0); i < int(n); ++i) {
-            quotient[i] <-- field(quotientAcc % int(2 ** w));
-            quotientAcc = quotientAcc >> int(w);
-        }
-        for (int i = int(0); i < int(n); ++i) {
-            remainder[i] <-- field(remainderAcc % int(2 ** w));
-            remainderAcc = remainderAcc >> int(w);
-        }
-        quotientAcc === int(0);
-        remainderAcc === int(0);
-    }
-
-    component remainderDecomp[n];
-    for (var i = 0; i < n; i++) {
-        remainderDecomp[i] = Num2Bits(w);
-        remainderDecomp[i].in <== remainder[i];
-    }
-
-    component multiplier = LinearMultiplierWithAdd(w, n);
-    for (var i = 0; i < n; i++) {
-        multiplier.a[i] <== quotient[i];
-        multiplier.b[i] <== divisor[i];
-        multiplier.c[i] <== remainder[i];
-    }
-    for (var i = 0; i < 2 * n; i++) {
-        multiplier.prod[i] === dividend[i];
-    }
-}
-
 template MultiplierReducer(w, n) {
     // Computes prod and verifies that `prod = a * b (mod modulus)
     // Constraints:
-    //   2(2n - 1) for two polynomial multipliers
-    //   (w + 1)(2(2n - 1) + 1) for a 2n-word carry
+    //   $2(2n - 1)$ for two polynomial multipliers
+    //   $(2n - 2)(w + 2 + ceil(log2(2n - 1))) + 1$ for the carried equality
+    //   $2(nw)$ for the product and modulus decompositions
     //   Total:
-    //      (w + 2)(4n - 1) - 1
+    //      2n(2w + ceil(log2(n)) + 5) - 2w - 7
     signal input a[n];
     signal input b[n];
     signal input modulus[n];
@@ -465,12 +450,85 @@ template MultiplierReducer(w, n) {
         right.b[i] <== modulus[i];
     }
 
-    component carry = CarriesToZero(w, 2 * n - 1);
+    component carry = EqualWhenCarried(w, 2 * n - 1);
     for (var i = 0; i < 2 * n - 1; ++i) {
         if (i < n) {
-            carry.in[i] <== left.prod[i] - right.prod[i] - prod[i];
+            carry.a[i] <== left.prod[i];
+            carry.b[i] <== right.prod[i] + prod[i];
         } else {
-            carry.in[i] <== left.prod[i] - right.prod[i];
+            carry.a[i] <== left.prod[i];
+            carry.b[i] <== right.prod[i];
+        }
+    }
+}
+
+template PowerMod(w, nb, ne) {
+    // Constraints:
+    //    <= 2 * w * ne * (w + 2) * (4nb - 1)
+    signal input base[nb];
+    signal input exp[ne];
+
+    signal input modulus[nb];
+    signal output out[nb];
+
+    component powerBinExp = PowerModBin(w, nb, ne * w);
+
+    component expDecomp[ne];
+    for (var i = 0; i < nb; ++i) {
+        powerBinExp.base[i] <== base[i];
+        powerBinExp.modulus[i] <== modulus[i];
+    }
+    for (var i = 0; i < ne; ++i) {
+        expDecomp[i] = Num2Bits(w);
+        expDecomp[i].in <== exp[i];
+        for (var j = 0; j < w; ++j) {
+            powerBinExp.binaryExp[i * w + j] <== expDecomp[i].out[j];
+        }
+    }
+    for (var i = 0; i < nb; ++i) {
+        out[i] <== powerBinExp.out[i];
+    }
+}
+
+template PowerModBin(w, nb, bitsExp) {
+    //
+    // Constraints:
+    //    2 * bitsExp * 2(2nw + 4n - w - 1)     for two multipliers per exp bit
+    //    bitsExp * 1                           for one ternary per exp bit
+    //    <= 4 * bitsExp * (2nw + 4n - w)       total
+    signal input base[nb];
+    signal input binaryExp[bitsExp];
+
+    signal input modulus[nb];
+    signal output out[nb];
+    if (bitsExp == 0) {
+        out[0] <== 1;
+        for (var i = 1; i < nb; ++i) {
+            out[i] <== 0;
+        }
+    } else {
+        component recursive = PowerModBin(w, nb, bitsExp - 1);
+        component square = MultiplierReducer(w, nb);
+        component mult = MultiplierReducer(w, nb);
+        for (var i = 0; i < nb; ++i) {
+            square.modulus[i] <== modulus[i];
+            square.a[i] <== base[i];
+            square.b[i] <== base[i];
+        }
+        for (var i = 0; i < nb; ++i) {
+            recursive.base[i] <== square.prod[i];
+            recursive.modulus[i] <== modulus[i];
+        }
+        for (var i = 0; i < bitsExp - 1; ++i) {
+            recursive.binaryExp[i] <== binaryExp[i + 1];
+        }
+        for (var i = 0; i < nb; ++i) {
+            mult.modulus[i] <== modulus[i];
+            mult.a[i] <== base[i];
+            mult.b[i] <== recursive.out[i];
+        }
+        for (var i = 0; i < nb; ++i) {
+            out[i] <== recursive.out[i] + binaryExp[0] * (mult.prod[i] - recursive.out[i]);
         }
     }
 }
