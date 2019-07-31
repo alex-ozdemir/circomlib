@@ -4,6 +4,7 @@ const snarkjs = require("snarkjs");
 
 const compiler = require("circom");
 
+const { assertWitnessHas, splitToWords, extractExpr } = require("./util.js");
 
 const assert = chai.assert;
 chai.should();
@@ -642,3 +643,51 @@ describe("LinearMultiplier", () => {
     });
 });
 
+describe("Regroup", () => {
+
+    var regroup_2_4_2;
+    var constraints = (w, n, g) => (n / g + 1);
+    before(async () => {
+        regroup_2_4_2 = new snarkjs.Circuit(await compiler(path.join(__dirname, "..", "circuits", "bigint", "regroup_2_4_2.circom")));
+    });
+
+    it(`should have ${constraints(2, 4, 4)} = ${extractExpr(constraints)} constraints`, async () => {
+        const bound = constraints(2, 4, 4);
+        regroup_2_4_2.nConstraints.should.be.at.most(bound);
+    });
+
+    it("should group 0,0,0,0 -> 0,0 (w = 2)", async () => {
+        const input = {
+            "in[0]": "0",
+            "in[1]": "0",
+            "in[2]": "0",
+            "in[3]": "0",
+        };
+        const witness = regroup_2_4_2.calculateWitness(input);
+        assert(witness[regroup_2_4_2.signalName2Idx["main.out[0]"]].equals(snarkjs.bigInt(0)));
+        assert(witness[regroup_2_4_2.signalName2Idx["main.out[1]"]].equals(snarkjs.bigInt(0)));
+    });
+
+    it("should group 0,0,0,15 -> 0,15 (w=2)", async () => {
+        const input = {
+            "in[0]": "15",
+            "in[1]": "0",
+            "in[2]": "0",
+            "in[3]": "0",
+        };
+        const witness = regroup_2_4_2.calculateWitness(input);
+        assert(witness[regroup_2_4_2.signalName2Idx["main.out[0]"]].equals(snarkjs.bigInt(15)));
+        assert(witness[regroup_2_4_2.signalName2Idx["main.out[1]"]].equals(snarkjs.bigInt(0)));
+    });
+    it("should group 5,3,7,8 -> 23,36 (w=2)", async () => {
+        const input = {
+            "in[0]": "8",
+            "in[1]": "7",
+            "in[2]": "3",
+            "in[3]": "5",
+        };
+        const witness = regroup_2_4_2.calculateWitness(input);
+        assert(witness[regroup_2_4_2.signalName2Idx["main.out[0]"]].equals(snarkjs.bigInt(36)));
+        assert(witness[regroup_2_4_2.signalName2Idx["main.out[1]"]].equals(snarkjs.bigInt(23)));
+    });
+});

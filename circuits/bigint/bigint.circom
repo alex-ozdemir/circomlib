@@ -260,9 +260,19 @@ template Carry(w, n) {
     out[n] <== carry[n];
 }
 
-template EqualWhenCarried(w, n) {
-    // Given two 2w-bit polynomials of degree <n which are supposed to be
-    // w(n+1)-bit numbers, enforces their equality.
+template EqualWhenCarried(wordMax, outWidth, n) {
+    // Given two (overflowing) n-chunk integers asserts:
+    //   that they fir properly in n+1 chunks AND
+    //   that they're equal
+    // Params:
+    //   wordMax:   an upper bound on all input words
+    //   outWidth:  the desired output width
+    //   n:         the number of chunks in the inputs
+    // Constraints:
+    //   $n$ constraints for carry + output sums
+    //   $(n-1)(ceil(log2(2wordMax)) - w)$ contraints for bit decompositions
+    //
+    //   $(n - 1)(ceil(log2(wordMax)) - w + 2) + 1$ in total
 
     // The naive approach is to add the two numbers chunk by chunk and:
     //    a. Verify that they sum to zero along the way while
@@ -271,11 +281,6 @@ template EqualWhenCarried(w, n) {
     // So instead we choose a special c and verify that a - b + c = c
     // where c is chosen to insure that intermediate sums are non-negative.
 
-    // Constraints:
-    //   $n$ constraints for carry + output sums
-    //   $(n-1)(w + 1 + ceil(log2(n)))$ contraints for bit decompositions
-    //
-    //   $(n - 1)(w + 2 + ceil(log2(n))) + 1$ in total
     signal input a[n];
     signal input b[n];
 
@@ -283,27 +288,27 @@ template EqualWhenCarried(w, n) {
     signal carry[n + 1];
     signal out[n];
 
-    var wordMax = n * (2 ** w - 1) * (2 ** w - 1) + (2 ** w - 1);
-    var carryBits = log2(2 * wordMax) - w;
+    var carryBits = log2(2 * wordMax) - outWidth;
+    var outBase = 2 ** outWidth;
     var accumulatedExtra = 0;
 
     carry[0] <== 0;
 
     for (var i = 0; i < n; i++) {
         // We add an extra (wordMax) to the carry to ensure that it is positive
-        out[i] <--(a[i] - b[i] + carry[i] + wordMax) % (2 ** w);
+        out[i] <--(a[i] - b[i] + carry[i] + wordMax) % outBase;
 
-        carry[i + 1] <-- (a[i] - b[i] + carry[i] + wordMax) \ (2 ** w);
+        carry[i + 1] <-- (a[i] - b[i] + carry[i] + wordMax) \ outBase;
 
         // Verify we've split correctly
-        carry[i + 1] * (2 ** w) + out[i] === carry[i] + a[i] - b[i] + wordMax;
+        carry[i + 1] * outBase + out[i] === carry[i] + a[i] - b[i] + wordMax;
 
         // Verify that the output is correct
         accumulatedExtra += wordMax;
-        out[i] === accumulatedExtra % (2 ** w);
-        accumulatedExtra = accumulatedExtra \ (2 ** w);
+        out[i] === accumulatedExtra % outBase;
+        accumulatedExtra = accumulatedExtra \ outBase;
 
-        // Verify that our carry fits in `w` bits
+        // Verify that our carry fits in `carryBits` bits
         if (i < n - 1) {
             carryBitDecomps[i] = Num2Bits(carryBits);
             carryBitDecomps[i].in <== carry[i + 1];
@@ -311,6 +316,75 @@ template EqualWhenCarried(w, n) {
             // The final carry should match the extra
             carry[i + 1] === accumulatedExtra;
         }
+    }
+}
+
+template Regroup(w, n, g) {
+    // Given base-w, n-chunk integers, regroups them such that up to g groups go together
+    var nGroups = (n - 1) \ g + 1;
+    signal input in[n];
+    signal output out[nGroups];
+
+    var lc[nGroups];
+    for (var i = 0; i < nGroups; ++i) {
+        lc[i] = 0;
+        for (var j = 0; j < g && i * g + j < n; ++j) {
+            lc[i] += (2 ** (w * j)) * in[i * g + j];
+        }
+        out[i] <== lc[i];
+    }
+}
+
+template EqualWhenCarriedRegroup(wordMax, outWidth, n) {
+    // Given two (overflowing) n-chunk integers asserts:
+    //   that they fir properly in n+1 chunks AND
+    //   that they're equal
+    // Params:
+    //   wordMax:   an upper bound on all input words
+    //   outWidth:  the desired output width
+    //   n:         the number of chunks in the inputs
+    // Constraints:
+    //   $(nGroups - 1)(ceil(log2(groupMax)) - outWidth + 2) + 1$
+    //   ~
+    //   $(ceil(n/chunksPerGroup) - 1)(ceil(log2(groupMax)) - w + 2) + 1$
+    //   $(ceil(n/floor((252 - carryBits) / outWidth)) - 1)(ceil(log2(groupMax)) - w + 2) + 1$
+    //   $(ceil(n/floor((251 - ceil(log2(wordMax)) + outWidth) / outWidth)) - 1)(ceil(log2(groupMax)) - w + 2) + 1$
+
+    // The naive approach is to add the two numbers chunk by chunk and:
+    //    a. Verify that they sum to zero along the way while
+    //    b. Propegating carries
+    // but this doesn't work because early sums might be negative.
+    // So instead we choose a special c and verify that a - b + c = c
+    // where c is chosen to insure that intermediate sums are non-negative.
+
+    signal input a[n];
+    signal input b[n];
+
+    var carryBits = log2(2 * wordMax) - outWidth;
+    var outBase = 2 ** outWidth;
+    var chunksPerGroup = (252 - carryBits) \ outWidth;
+    var nGroups = (n - 1) \ chunksPerGroup + 1;
+    var groupMax = 0;
+    for (var i = 0; i < chunksPerGroup; ++i) {
+        groupMax += 2 ** (outWidth * i) * wordMax;
+    }
+
+    // Group a, b
+    component aGrouper = Regroup(outWidth, n, chunksPerGroup);
+    component bGrouper = Regroup(outWidth, n, chunksPerGroup);
+
+    for (var i = 0; i < n; ++i) {
+        aGrouper.in[i] <== a[i];
+        bGrouper.in[i] <== b[i];
+    }
+
+    // Now, check carries
+    component equality = EqualWhenCarried(groupMax, outWidth * chunksPerGroup, nGroups);
+
+
+    for (var i = 0; i < nGroups; ++i) {
+        equality.a[i] <== aGrouper.out[i];
+        equality.b[i] <== bGrouper.out[i];
     }
 }
 
@@ -450,7 +524,8 @@ template MultiplierReducer(w, n) {
         right.b[i] <== modulus[i];
     }
 
-    component carry = EqualWhenCarried(w, 2 * n - 1);
+    var maxWord = n * (2 ** w - 1) * (2 ** w - 1) + (2 ** w - 1);
+    component carry = EqualWhenCarriedRegroup(maxWord, w, 2 * n - 1);
     for (var i = 0; i < 2 * n - 1; ++i) {
         if (i < n) {
             carry.a[i] <== left.prod[i];
