@@ -1,6 +1,7 @@
 include "../bitify.circom";
 
 function log2(x) {
+    // Given a field element, returns the log2 of it, rounded up.
     for (var i = 0; i < x; ++i) {
         if (2 ** i >= x) {
             return i;
@@ -13,7 +14,6 @@ template FullAdder(w) {
     // An adder which adds 3 w-bit numbers and produces:
     // * a w-bit result and
     // * a w-bit carry
-    //
     signal input in1;
     signal input in2;
     signal input in3;
