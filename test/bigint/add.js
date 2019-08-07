@@ -31,7 +31,7 @@ describe("FullAdder", () => {
 
         const circuit = new snarkjs.Circuit(fullAdder8);
 
-        const witness = circuit.calculateWitness({ "in1": "5", "in2": "12", "in3": "1" });
+        const witness = circuit.calculateWitness({ "in0": "5", "in1": "12", "in2": "1" });
 
         assert(witness[0].equals(snarkjs.bigInt(1)));  // One
         assert(witness[1].equals(snarkjs.bigInt(18))); // Sum
@@ -49,9 +49,9 @@ describe("FullAdder", () => {
         assert(witness[11].equals(snarkjs.bigInt(0))); // Carry LSB
         assert(witness[12].equals(snarkjs.bigInt(0)));
 
-        assert(witness[13].equals(snarkjs.bigInt(5))); // in1
-        assert(witness[14].equals(snarkjs.bigInt(12))); // in2
-        assert(witness[15].equals(snarkjs.bigInt(1))); // in3
+        assert(witness[13].equals(snarkjs.bigInt(5))); // in0
+        assert(witness[14].equals(snarkjs.bigInt(12))); // in1
+        assert(witness[15].equals(snarkjs.bigInt(1))); // in2
 
         assert(witness[16].equals(snarkjs.bigInt(18))); // rawSum
     });
@@ -61,7 +61,7 @@ describe("FullAdder", () => {
 
         const circuit = new snarkjs.Circuit(fullAdder8);
 
-        const witness = circuit.calculateWitness({ "in1": "255", "in2": "254", "in3": "0" });
+        const witness = circuit.calculateWitness({ "in0": "255", "in1": "254", "in2": "0" });
 
         assert(witness[0].equals(snarkjs.bigInt(1)));  // One
         assert(witness[1].equals(snarkjs.bigInt(253))); // Sum
@@ -85,7 +85,7 @@ describe("FullAdder", () => {
 
         const circuit = new snarkjs.Circuit(fullAdder8);
 
-        const witness = circuit.calculateWitness({ "in1": "255", "in2": "254", "in3": "3" });
+        const witness = circuit.calculateWitness({ "in0": "255", "in1": "254", "in2": "3" });
 
         assert(witness[0].equals(snarkjs.bigInt(1)));  // One
         assert(witness[1].equals(snarkjs.bigInt(0))); // Sum
@@ -109,7 +109,7 @@ describe("FullAdder", () => {
 
         const circuit = new snarkjs.Circuit(fullAdder64);
 
-        const witness = circuit.calculateWitness({ "in1": "18446744073709551615", "in2": "4294967296", "in3": "1" });
+        const witness = circuit.calculateWitness({ "in0": "18446744073709551615", "in1": "4294967296", "in2": "1" });
 
         assert(witness[0].equals(snarkjs.bigInt(1)));  // One
         assert(witness[1].equals(snarkjs.bigInt("4294967296"))); // Sum
@@ -121,7 +121,7 @@ describe("FullAdder", () => {
 
         const circuit = new snarkjs.Circuit(fullAdder32);
 
-        const witness = circuit.calculateWitness({ "in1": "4294967295", "in2": "4294967295", "in3": "1" });
+        const witness = circuit.calculateWitness({ "in0": "4294967295", "in1": "4294967295", "in2": "1" });
 
         assert(witness[0].equals(snarkjs.bigInt(1)));  // One
         assert(witness[1].equals(snarkjs.bigInt("4294967295"))); // Sum

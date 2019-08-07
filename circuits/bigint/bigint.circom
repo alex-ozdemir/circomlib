@@ -14,9 +14,9 @@ template FullAdder(w) {
     // An adder which adds 3 w-bit numbers and produces:
     // * a w-bit result and
     // * a w-bit carry
+    signal input in0;
     signal input in1;
     signal input in2;
-    signal input in3;
 
     signal output sum;
     signal output carry;
@@ -25,7 +25,7 @@ template FullAdder(w) {
 
     signal rawSum;
 
-    rawSum <== in1 + in2 + in3;
+    rawSum <== in0 + in1 + in2;
 
     carry <-- rawSum >> w;
     sum <-- rawSum % (2 ** w);
@@ -58,9 +58,9 @@ template RippleCarryAdder(w, nWords) {
     component adder[nWords];
     for (var i = 0; i < nWords; ++i) {
         adder[i] = FullAdder(w);
-        adder[i].in1 <== carry[i];
-        adder[i].in2 <== a[i];
-        adder[i].in3 <== b[i];
+        adder[i].in0 <== carry[i];
+        adder[i].in1 <== a[i];
+        adder[i].in2 <== b[i];
         adder[i].sum ==> sum[i];
         adder[i].carry ==> carry[i + 1];
     }
@@ -190,38 +190,66 @@ template PolynomialMultiplier(d) {
     // Witness value.
     signal output prod[2 * d - 1];
 
+    component inner = AsymmetricPolynomialMultiplier(d, d);
+    for (var i = 0; i < d; ++i) {
+        inner.in0[i] <== a[i];
+        inner.in1[i] <== b[i];
+    }
+    for (var i = 0; i < 2 * d - 1; ++i) {
+        inner.out[i] ==> prod[i];
+    }
+}
+
+template AsymmetricPolynomialMultiplier(d0, d1) {
+    // Implementation of _xjSnark_'s multiplication.
+    // Parameters/Inputs:
+    //    * `in0` with degree less than `d0`
+    //    * `in1` with degree less than `d1`
+    // Uses a linear number of constraints ($d0 + d1 - 1$).
+    signal input in0[d0];
+    signal input in1[d1];
+
+    // Output has degree less than `d`
+    var d = d0 + d1 - 1;
+
+    // Witness value.
+    signal output out[d];
+
     // Witness computation.
     compute {
         var acc;
-        for (var i = 0; i < 2 * d - 1; i++) {
+        for (var i = 0; i < d; i++) {
             acc = 0;
-            for (var j = 0; j < d; j++) {
-                for (var k = 0; k < d; k++) {
-                    if (j + k == i) {
-                        acc += a[j] * b[k];
-                    }
-                }
+            var start = 0;
+            if (d1 < i + 1) {
+                start = i + 1 - d1;
             }
-            prod[i] <-- acc;
+            for (var j = start; j < d0 && j <= i; j++) {
+                var k = i - j;
+                acc += in0[j] * in1[k];
+            }
+            out[i] <-- acc;
         }
     }
 
     // Conditions.
-    var aAcc;
-    var bAcc;
-    var pAcc;
-    for (var c = 0; c < 2 * d - 1; c++) {
-        aAcc = 0;
-        bAcc = 0;
-        pAcc = 0;
+    var in0Val;
+    var in1Val;
+    var outVal;
+    for (var c = 0; c < d; c++) {
+        in0Val = 0;
+        in1Val = 0;
+        outVal = 0;
+        for (var i = 0; i < d0; i++) {
+            in0Val += (c + 1) ** i * in0[i];
+        }
+        for (var i = 0; i < d1; i++) {
+            in1Val += (c + 1) ** i * in1[i];
+        }
         for (var i = 0; i < d; i++) {
-            aAcc += (c + 1) ** i * a[i];
-            bAcc += (c + 1) ** i * b[i];
+            outVal += (c + 1) ** i * out[i];
         }
-        for (var i = 0; i < 2 * d - 1; i++) {
-            pAcc += (c + 1) ** i * prod[i];
-        }
-        aAcc * bAcc === pAcc;
+        in0Val * in1Val === outVal;
     }
 }
 
@@ -472,28 +500,55 @@ template MultiplierReducer(w, n) {
     signal input b[n];
     signal input modulus[n];
 
-    signal quotient[n];
-
     signal output prod[n];
 
-    compute {
-        int aAcc = int(0);
-        int bAcc = int(0);
-        int mAcc = int(0);
-        for (int i = int(0); i < int(n); i++) {
-            aAcc += int(a[i]) << (int(w) * i);
-            bAcc += int(b[i]) << (int(w) * i);
-            mAcc += int(modulus[i]) << (int(w) * i);
-        }
-        int fullProdAcc = aAcc * bAcc;
-        int quotientAcc = fullProdAcc / mAcc;
-        int prodAcc = fullProdAcc % mAcc;
+    component inner = AsymmetricMultiplierReducer(w, n, n);
+    for (var i = 0; i < n; ++i) {
+        inner.in0[i] <== a[i];
+        inner.in1[i] <== b[i];
+        inner.modulus[i] <== modulus[i];
+    }
+    for (var i = 0; i < n; ++i) {
+        inner.prod[i] ==> prod[i];
+    }
+}
 
-        for (int i = int(0); i < int(n); ++i) {
+template AsymmetricMultiplierReducer(w, n1, n2) {
+    // Computes prod and verifies that `out = in0 * in1 (mod `modulus`)
+    // Constraints:
+    //   $2(2n - 1)$ for two polynomial multipliers
+    //   $(2n - 2)(w + 2 + ceil(log2(2n - 1))) + 1$ for the carried equality
+    //   $2(nw)$ for the product and modulus decompositions
+    //   Total:
+    //      (n1 + n2)(2w + ceil(log2(min(n1, n2))) + 5) - 2w - 7
+    signal input in0[n1];
+    signal input in1[n2];
+    signal input modulus[n1];
+
+    signal quotient[n2];
+
+    signal output prod[n1];
+
+    compute {
+        int in0Val = int(0);
+        int in1Val = int(0);
+        int modVal = int(0);
+        for (int i = int(0); i < int(n1); i++) {
+            in0Val += int(in0[i]) << (int(w) * i);
+            modVal += int(modulus[i]) << (int(w) * i);
+        }
+        for (int i = int(0); i < int(n2); i++) {
+            in1Val += int(in1[i]) << (int(w) * i);
+        }
+        int fullProdAcc = in0Val * in1Val;
+        int quotientAcc = fullProdAcc / modVal;
+        int prodAcc = fullProdAcc % modVal;
+
+        for (int i = int(0); i < int(n2); ++i) {
             quotient[i] <-- field(quotientAcc % int(2 ** w));
             quotientAcc = quotientAcc >> int(w);
         }
-        for (int i = int(0); i < int(n); ++i) {
+        for (int i = int(0); i < int(n1); ++i) {
             prod[i] <-- field(prodAcc % int(2 ** w));
             prodAcc = prodAcc >> int(w);
         }
@@ -503,36 +558,43 @@ template MultiplierReducer(w, n) {
     }
 
     // Verify that the remainder and quotient are w-bits, n-chunks.
-    component prodDecomp[n];
-    for (var i = 0; i < n; i++) {
+    component prodDecomp[n1];
+    for (var i = 0; i < n1; i++) {
         prodDecomp[i] = Num2Bits(w);
         prodDecomp[i].in <== prod[i];
     }
 
-    component quotientDecomp[n];
-    for (var i = 0; i < n; i++) {
+    component quotientDecomp[n2];
+    for (var i = 0; i < n2; i++) {
         quotientDecomp[i] = Num2Bits(w);
         quotientDecomp[i].in <== quotient[i];
     }
 
-    component left = PolynomialMultiplier(n);
-    component right = PolynomialMultiplier(n);
-    for (var i = 0; i < n; ++i) {
-        left.a[i] <== a[i];
-        left.b[i] <== b[i];
-        right.a[i] <== quotient[i];
-        right.b[i] <== modulus[i];
+    component left = AsymmetricPolynomialMultiplier(n1, n2);
+    component right = AsymmetricPolynomialMultiplier(n1, n2);
+    for (var i = 0; i < n1; ++i) {
+        left.in0[i] <== in0[i];
+        right.in0[i] <== modulus[i];
+    }
+    for (var i = 0; i < n2; ++i) {
+        right.in1[i] <== quotient[i];
+        left.in1[i] <== in1[i];
     }
 
-    var maxWord = n * (2 ** w - 1) * (2 ** w - 1) + (2 ** w - 1);
-    component carry = EqualWhenCarriedRegroup(maxWord, w, 2 * n - 1);
-    for (var i = 0; i < 2 * n - 1; ++i) {
-        if (i < n) {
-            carry.a[i] <== left.prod[i];
-            carry.b[i] <== right.prod[i] + prod[i];
+    var minN = n1;
+    if (n2 < n1) {
+        minN = n2;
+    }
+    var n = n1 + n2;
+    var maxWord = minN * (2 ** w - 1) * (2 ** w - 1) + (2 ** w - 1);
+    component carry = EqualWhenCarriedRegroup(maxWord, w, n - 1);
+    for (var i = 0; i < n - 1; ++i) {
+        if (i < n1) {
+            carry.a[i] <== left.out[i];
+            carry.b[i] <== right.out[i] + prod[i];
         } else {
-            carry.a[i] <== left.prod[i];
-            carry.b[i] <== right.prod[i];
+            carry.a[i] <== left.out[i];
+            carry.b[i] <== right.out[i];
         }
     }
 }

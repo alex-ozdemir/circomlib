@@ -1,6 +1,7 @@
 const chai = require("chai");
 const path = require("path");
 const snarkjs = require("snarkjs");
+const bigInt = require("big-integer");
 
 const compiler = require("circom");
 
@@ -237,14 +238,6 @@ describe("Multiplier", () => {
         assert(witness[circuit.signalName2Idx["main.prod[2]"]].equals(snarkjs.bigInt(14)));
         assert(witness[circuit.signalName2Idx["main.prod[3]"]].equals(snarkjs.bigInt(15)));
     });
-
-    it("should have 8256 constraints (64 bits/word, 8 words)", async () => {
-        // n * n * (2w + 1) =
-        // 2 ** 6 * 129
-        const cirDef = await compiler(path.join(__dirname, "..", "circuits", "bigint", "mult_64bit_8word.circom"));
-        const circuit = new snarkjs.Circuit(cirDef);
-        circuit.nConstraints.should.equal(8256);
-    });
 });
 
 describe("PolynomialMultiplier", () => {
@@ -429,6 +422,61 @@ describe("PolynomialMultiplier", () => {
         assert(witness[circuit.signalName2Idx["main.prod[29]"]].equals(snarkjs.bigInt( "7809007931264072381739139035072")));
         assert(witness[circuit.signalName2Idx["main.prod[30]"]].equals(snarkjs.bigInt( "840867892083599894415616")));
         assert(witness[circuit.signalName2Idx["main.prod[31]"]].equals(snarkjs.bigInt( "0")));
+    });
+});
+
+describe("AsymmetricPolynomialMultiplier", () => {
+    var asymm_poly_2_5;
+
+    before(async () => {
+        asymm_poly_2_5 = new snarkjs.Circuit(await compiler(path.join(__dirname, "..", "circuits", "bigint", "asymm_poly_2_5.circom")));
+    });
+
+    it("should have 6 constraints (degrees 2, 5)", async () => {
+        // 2 + 5 - 1
+        asymm_poly_2_5.nConstraints.should.equal(6);
+    });
+
+    it("should compute 1 * 1 = 1 (degrees 2, 5)", async () => {
+        const input = Object.assign({},
+            splitToWords(bigInt("1"), 100, 2, "in0"),
+            splitToWords(bigInt("1"), 100, 5, "in1"),
+        );
+        const witness = asymm_poly_2_5.calculateWitness(input);
+        assertWitnessHas(asymm_poly_2_5, witness, "out", bigInt("1"), 100, 6);
+    });
+
+    it("should compute 1,1 * 1,1,1 = 1,2,2,1 (degrees 2, 5)", async () => {
+        const input = {
+            "in0[0]": "1",
+            "in0[1]": "1",
+            "in1[0]": "1",
+            "in1[1]": "1",
+            "in1[2]": "1",
+            "in1[3]": "0",
+            "in1[4]": "0",
+        };
+        const witness = asymm_poly_2_5.calculateWitness(input);
+        assert(witness[asymm_poly_2_5.signalName2Idx["main.out[0]"]].equals(snarkjs.bigInt( "1")));
+        assert(witness[asymm_poly_2_5.signalName2Idx["main.out[1]"]].equals(snarkjs.bigInt( "2")));
+        assert(witness[asymm_poly_2_5.signalName2Idx["main.out[2]"]].equals(snarkjs.bigInt( "2")));
+        assert(witness[asymm_poly_2_5.signalName2Idx["main.out[3]"]].equals(snarkjs.bigInt( "1")));
+    });
+    it("should compute 1,7 * 1,1,1 = 1,8,8,7 (degrees 2, 5)", async () => {
+        const input = {
+            "in0[0]": "1",
+            "in0[1]": "7",
+            "in1[0]": "1",
+            "in1[1]": "1",
+            "in1[2]": "1",
+            "in1[3]": "0",
+            "in1[4]": "0",
+        };
+        const witness = asymm_poly_2_5.calculateWitness(input);
+        assert(witness[asymm_poly_2_5.signalName2Idx["main.out[0]"]].equals(snarkjs.bigInt( "1")));
+        assert(witness[asymm_poly_2_5.signalName2Idx["main.out[1]"]].equals(snarkjs.bigInt( "8")));
+        assert(witness[asymm_poly_2_5.signalName2Idx["main.out[2]"]].equals(snarkjs.bigInt( "8")));
+        assert(witness[asymm_poly_2_5.signalName2Idx["main.out[3]"]].equals(snarkjs.bigInt( "7")));
     });
 });
 

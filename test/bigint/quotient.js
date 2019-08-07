@@ -189,3 +189,53 @@ describe("MultiplierReducer", () => {
         assertWitnessHas(bit12, witness, "prod", output, 4, 3);
     });
 });
+
+describe("AsymmetricMultiplierReducer", () => {
+
+    var constraints = (w, n1, n2) => ((n1 + n2) * (2*w + Math.ceil(Math.log2(Math.min(n1,n2))) + 5) - 2*w - 7);
+    var m128x1024;
+    var p = bigInt("255329303250400393868318758301001690479");
+
+    before(async () => {
+        m128x1024 = new snarkjs.Circuit(await compiler(path.join(__dirname, "..", "circuits", "bigint", "asymm_mult_reduce_128_1024_32b.circom")));
+    });
+
+    it(`should have ${constraints(32, 32, 4)} = ${extractExpr(constraints)} constraints (1024x128)`, async () => {
+        const bound = constraints(32, 32, 4);
+        m128x1024.nConstraints.should.be.at.most(bound);
+    });
+
+    [
+        {
+            "in0":0,
+            "in1":0,
+            "mod":p
+        },
+        {
+            "in0":1,
+            "in1":1,
+            "mod":p
+        },
+        {
+            "in0":p.minus(1),
+            "in1":1,
+            "mod":p
+        },
+        {
+            "in0":p.minus(1),
+            "in1":bigInt(2).pow(1024).minus(1),
+            "mod":p
+        },
+    ].forEach(({in0, in1, mod}) => {
+        const expected = bigInt(in0).times(bigInt(in1)).mod(bigInt(mod));
+        it(`should compute ${in0} * ${in1} = ${expected} (mod ${mod}) (1024x128)`, async () => {
+            const input = Object.assign({},
+                splitToWords(in0, 32, 4, "in0"),
+                splitToWords(in1, 32, 32, "in1"),
+                splitToWords(mod, 32, 4, "modulus"),
+            );
+            const witness = m128x1024.calculateWitness(input);
+            assertWitnessHas(m128x1024, witness, "prod", expected, 32, 4);
+        });
+    });
+});
