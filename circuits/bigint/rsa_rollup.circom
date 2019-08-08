@@ -30,42 +30,60 @@ template BalanceHash(w) {
     signal input txNo;
 
     var outBits = 1024;
+    var fieldBits = 254;
 
     var n = outBits \ w;
 
     signal output out[n];
 
+    // # Stage 1: Hashing in the field
+    // We used a hash to digest
+    //  * public key X
+    //  * public key Y
+    //  * amount
+    //  * tx number
+    // And then we use a compression function to add in 4 different counters,
+    // for 4 field element outputs
+
     signal hash[4];
-    component hasher[4];
+    component hasher;
+    hasher = MultiMiMC7(4,91);
+    hasher.in[0] <== pkX;
+    hasher.in[1] <== pkY;
+    hasher.in[2] <== amt;
+    hasher.in[3] <== txNo;
+    component counterFolder[4];
     component hashDecomp[4];
     for (var i = 0; i < 4; ++i) {
-        hasher[i] = MultiMiMC7(5,91);
-        hasher[i].in[0] <== i;
-        hasher[i].in[1] <== pkX;
-        hasher[i].in[2] <== pkY;
-        hasher[i].in[3] <== amt;
-        hasher[i].in[4] <== txNo;
+        counterFolder[i] = MiMC7Compression(91);
+        counterFolder[i].data <== i;
+        counterFolder[i].acc <== hasher.out;
         hashDecomp[i] = Num2Bits_strict();
-        hashDecomp[i].in <== hasher[i].out;
+        hashDecomp[i].in <== counterFolder[i].out;
     }
 
+    // # Stage 2: Building a number
+    //
     // We're going to build a 1024b number like this:
     //
     //
     //              1  bbbbbbb   bbbbbbb   bbbbbbb   bbbbbbb   00000              1
-    // | leading one | h4 bits | h3 bits | h2 bits | h1 bits | zeros | trailing one |
+    //
+    //   leading one | h4 bits | h3 bits | h2 bits | h1 bits | zeros | trailing one
+    //
+    //    where h# indicates hash number #.
     //
     // The leading one gaurantees 1024bit-ness, and the trailing 1 gaurantees oddness
-    var nBitsInHashes = 254 * 4;
+    var nBitsInHashes = fieldBits * 4;
     var nTrailingZeros = outBits - nBitsInHashes - 2;
 
     var combination[n];
 
     combination[0] += 1;
     for (var i = 0; i < 4; ++i) {
-        for (var j = 0; j < 254; ++j) {
+        for (var j = 0; j < fieldBits; ++j) {
             // Bit index into the output number pictured above
-            var outI = (i * 254 + j + nTrailingZeros + 1);
+            var outI = (i * fieldBits + j + nTrailingZeros + 1);
             combination[outI \ w] += (2 ** (outI % w)) * hashDecomp[i].out[j];
         }
     }

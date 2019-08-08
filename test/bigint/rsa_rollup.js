@@ -18,7 +18,7 @@ describe("BalanceHash", () => {
                 path.join(__dirname, "..", "circuits", "bigint", "balance_hash.circom")));
     });
 
-    it("should have <= 10,000 constraints", async () => {
-        bhash.nConstraints.should.be.at.most(10000);
+    it("should have <= 5,000 constraints", async () => {
+        bhash.nConstraints.should.be.at.most(5000);
     });
 });
