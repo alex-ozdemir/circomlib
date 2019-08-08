@@ -18,6 +18,7 @@
 */
 
 template MiMC7(nrounds) {
+    // The MiMC (x^7) permutation.
     signal input x_in;
     signal input k;
     signal output out;
@@ -135,7 +136,21 @@ template MiMC7(nrounds) {
     }
 }
 
+template MiMC7Compression(nRounds) {
+    // This is an instantion of the Miyaguchi-Preneel compression mode with the
+    // MiMC(x^7) block cipher
+    signal input acc;
+    signal input data;
+
+    signal output out;
+    component cipher = MiMC7(nRounds);
+    cipher.x_in <== data;
+    cipher.k <== acc;
+    out <== data + acc + cipher.out;
+}
+
 template MultiMiMC7(nInputs, nRounds) {
+    // This is a hash function: Merkle-Damgard(Miyaguchi-Preneel(MiMC(x^7)))
     signal input in[nInputs];
     signal input k;
     signal output out;
@@ -145,11 +160,12 @@ template MultiMiMC7(nInputs, nRounds) {
 
     r[0] <== k;
     for (var i=0; i<nInputs; i++) {
-        mims[i] = MiMC7(nRounds);
-        mims[i].x_in <== in[i];
-        mims[i].k <== r[i];
-        r[i+1] <== r[i] + in[i] + mims[i].out;
+        mims[i] = MiMC7Compression(nRounds);
+        mims[i].acc <== r[i];
+        mims[i].data <== in[i];
+        r[i + 1] <== mims[i].out;
     }
 
     out <== r[nInputs];
 }
+

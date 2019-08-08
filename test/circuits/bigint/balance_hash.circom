@@ -1,0 +1,5 @@
+include "../../../circuits/bigint/rsa_rollup.circom"
+
+component main = BalanceHash(32);
+
+
