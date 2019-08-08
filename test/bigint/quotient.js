@@ -239,3 +239,65 @@ describe("AsymmetricMultiplierReducer", () => {
         });
     });
 });
+
+describe("MultiProduct", () => {
+
+    var constraints = (w, n1, n2, c) => (c * (n1 + n2) * (2*w + Math.ceil(Math.log2(Math.min(n1,n2))) + 5) - 2*w - 7);
+    var m128x1024_4;
+    var p = bigInt("255329303250400393868318758301001690479");
+
+    before(async () => {
+        m128x1024_4 = new snarkjs.Circuit(await compiler(path.join(__dirname, "..", "circuits", "bigint", "multiprod_128_1024_4in_32b.circom")));
+    });
+
+    it(`should have ${constraints(32, 32, 4, 4)} = ${extractExpr(constraints)} constraints (1024x128)`, async () => {
+        const bound = constraints(32, 32, 4, 4);
+        m128x1024_4.nConstraints.should.be.at.most(bound);
+    });
+
+    [
+        {
+            "in[0]":0,
+            "in[1]":0,
+            "in[2]":0,
+            "in[3]":0,
+            "modulus":p
+        },
+        {
+            "in[0]":1,
+            "in[1]":1,
+            "in[2]":1,
+            "in[3]":1,
+            "modulus":p
+        },
+        {
+            "in[0]":1,
+            "in[1]":2,
+            "in[2]":3,
+            "in[3]":4,
+            "modulus":p
+        },
+        {
+            "in[0]":p.minus(4),
+            "in[1]":p.minus(3),
+            "in[2]":p.minus(2),
+            "in[3]":p.minus(1),
+            "modulus":p
+        },
+    ].forEach((inputs) => {
+        const modulus = bigInt(inputs["modulus"]);
+        const expected = Object.entries(inputs).filter((pair) => pair[0].includes("in")).map((pair) => bigInt(pair[1])).reduce((a, b) => a.times(b).mod(modulus), bigInt(1));
+        const prodStr = Object.entries(inputs).filter((pair) => pair[0].includes("in")).map((pair) => pair[1].toString()).join(" * ");
+        it(`should compute ${prodStr} = ${expected} (mod ${modulus}) (1024x128)`, async () => {
+            const input = Object.assign({},
+                splitToWords(modulus, 32, 4, "modulus"),
+                splitToWords(bigInt(inputs["in[0]"]), 32, 32, "in[0]"),
+                splitToWords(bigInt(inputs["in[1]"]), 32, 32, "in[1]"),
+                splitToWords(bigInt(inputs["in[2]"]), 32, 32, "in[2]"),
+                splitToWords(bigInt(inputs["in[3]"]), 32, 32, "in[3]"),
+            );
+            const witness = m128x1024_4.calculateWitness(input);
+            assertWitnessHas(m128x1024_4, witness, "out", expected, 32, 4);
+        });
+    });
+});

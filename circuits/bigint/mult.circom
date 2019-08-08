@@ -432,3 +432,33 @@ template AsymmetricMultiplierReducer(w, n1, n2) {
         }
     }
 }
+
+template MultiProduct(w, modulusChunks, inputChunks, nInputs) {
+    // Verifies the product of `nInputs` `inputChunks`-chunk nubmers, modulo a
+    // `modulusChunks`-chunk modulus.
+
+    signal input in[nInputs][inputChunks];
+    signal input modulus[modulusChunks];
+
+    signal output out[modulusChunks];
+
+    component multiplier[nInputs];
+
+    for (var i = 0; i < nInputs; ++i) {
+        multiplier[i] = AsymmetricMultiplierReducer(w, modulusChunks, inputChunks);
+        for (var j = 0; j < inputChunks; ++j) {
+            multiplier[i].in1[j] <== in[i][j];
+        }
+        for (var j = 0; j < modulusChunks; ++j) {
+            multiplier[i].modulus[j] <== modulus[j];
+            if (i == 0) {
+                multiplier[i].in0[j] <== (j == 0 ? 1 : 0);
+            } else {
+                multiplier[i].in0[j] <== multiplier[i - 1].prod[j];
+            }
+        }
+    }
+    for (var j = 0; j < modulusChunks; ++j) {
+        out[j] <== multiplier[nInputs - 1].prod[j];
+    }
+}
