@@ -1,4 +1,4 @@
 include "../../../circuits/bigint/rsa_rollup.circom"
 
-component main = RsaRollup(4);
+component main = RsaRollup(1);
 

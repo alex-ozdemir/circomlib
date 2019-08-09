@@ -170,7 +170,19 @@ template RsaRollup(nTx) {
         sigVerifier[i].M <== txHash[i].out;
     }
 
-    // TODO Semantically verify Tx
+    // (enforce small, positive transfer and balance amounts)
+    component amtBoundsChk[nTx];
+    component newSrcBalBoundsChk[nTx];
+    component newDstBalBoundsChk[nTx];
+    for (var i = 0; i < nTx; ++i) {
+        // txSrcBal[i] - txAmt[i] >= 0
+        amtBoundsChk[i] = Num2Bits(64);
+        amtBoundsChk[i].in <== txAmt[i];
+        newSrcBalBoundsChk[i] = Num2Bits(64);
+        newSrcBalBoundsChk[i].in <== txSrcBal[i] - txAmt[i];
+        newDstBalBoundsChk[i] = Num2Bits(64);
+        newDstBalBoundsChk[i].in <== txSrcBal[i] + txAmt[i];
+    }
 
     // Building the balance leaves
     component srcBalanceBefore[nTx];
