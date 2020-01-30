@@ -136,3 +136,4 @@ template EdDSAVerifier(n) {
     mulFix.out[0] === addRight.xout;
     mulFix.out[1] === addRight.yout;
 }
+component main = CompConstant(2736030358979909402780800718157159386076813972158567259200215660948447373040);

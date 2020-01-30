@@ -101,7 +101,9 @@ template Bits2Point_Strict() {
 
     var x = sqrt(   (1-y2)/(a - d*y2)  );
 
-    if (in[255] == 1) x = -x;
+    compute {
+        if (in[255] == 1) x = -x;
+    }
 
     out[0] <-- x;
 
